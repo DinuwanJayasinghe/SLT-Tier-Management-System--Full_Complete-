@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: tire-request-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db # Persist MongoDB data
+    networks:
+      - tire-request-network
+
+  backend:
+    build:
+      context: ./tire-request-system-backend
+      dockerfile: Dockerfile
+    container_name: tire-request-backend
+    ports:
+      - "8080:8080" # Expose backend port to host
+    depends_on:
+      - mongodb
+    environment:
+      # Ensure these URLs point to services accessible within Docker network or externally if needed
+      # For service discovery within docker-compose network, use service names.
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/tire_request_db
+      # Email placeholders - should be configured properly for actual email sending
+      - SPRING_MAIL_HOST=smtp.example.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=your-docker-email@example.com
+      - SPRING_MAIL_PASSWORD=yourdockerpassword
+      # JWT and other app properties (can be overridden here or kept in application.properties)
+      - APP_JWTSECRET=${APP_JWTSECRET:-YourSuperSecretKeyForTireRequestSystemAppJWTsShouldBeVeryLongAndRandomForDocker} # Allow override from .env file
+      - APP_JWTEXPIRATIONMS=${APP_JWTEXPIRATIONMS:-86400000}
+      # Base URL for backend itself, useful if it needs to construct full URLs
+      - APP_BASE_URL=http://localhost:8080 # Or http://backend:8080 if only internal
+      # Frontend URL for CORS or email links (if backend generates them)
+      - FRONTEND_BASE_URL=http://localhost:3000 # This would be the URL user accesses frontend in browser
+      # File upload directory within the container
+      - FILE_UPLOAD_DIR=/app/uploads
+    volumes:
+      - backend_uploads:/app/uploads # Persist uploaded files for backend
+    networks:
+      - tire-request-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./tire-request-system-frontend
+      dockerfile: Dockerfile
+    container_name: tire-request-frontend
+    ports:
+      - "3000:80" # Map Nginx port 80 in container to host port 3000
+    depends_on:
+      - backend # Ensures backend is started, though Nginx will serve static files regardless
+    environment:
+      # These are build-time args for React, if you need to pass them to Dockerfile's RUN npm build.
+      # However, for runtime configuration (like API URLs), it's better to handle it in React code
+      # or have Nginx proxy requests if frontend and backend are served under the same domain.
+      # The .env file in frontend src is used at build time by default by CRA.
+      # To make frontend aware of backend URL in Docker:
+      # 1. Nginx proxy (preferred for production if same domain)
+      # 2. Have React app fetch a config file at runtime.
+      # 3. Build React app with fixed URL pointing to backend's exposed port or gateway.
+      # For simplicity, assuming frontend .env's REACT_APP_API_BASE_URL points to where backend is accessible
+      # (e.g. http://localhost:8080 if backend port is mapped to host)
+      # Or, if using Nginx proxy within frontend container (see nginx.conf example), it would be '/api'.
+      - NODE_ENV=production # Or development, affects how React is built
+    networks:
+      - tire-request-network
+    restart: unless-stopped
+
+networks:
+  tire-request-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  backend_uploads:
+    driver: local

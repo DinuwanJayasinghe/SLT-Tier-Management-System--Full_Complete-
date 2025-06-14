@@ -1,9 +1,11 @@
 import React from 'react';
 import {
     Modal, Box, Typography, Button, Grid, Paper, IconButton,
-    Table, TableBody, TableCell, TableContainer, TableRow, Divider
+    Table, TableBody, TableCell, TableContainer, TableRow, Divider, ListItemIcon, ListItemText
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DescriptionIcon from '@mui/icons-material/Description'; // For Request Details
+import ImageIcon from '@mui/icons-material/Image'; // For Images section
 
 const style = {
   position: 'absolute',
@@ -40,16 +42,20 @@ const RequestDetailsModal = ({ request, open, onClose }) => {
         >
           <CloseIcon />
         </IconButton>
-        <Typography id="request-details-title" variant="h5" component="h2" gutterBottom>
-          Request Details: Vehicle {request.vehicleNo}
-        </Typography>
-        <Divider sx={{ my: 2 }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <DescriptionIcon sx={{ mr: 1, fontSize: '2rem', color: 'primary.main' }} />
+            <Typography id="request-details-title" variant="h5" component="h2">
+              Request Details: Vehicle {request.vehicleNo}
+            </Typography>
+        </Box>
+        {/* <Divider sx={{ my: 1 }} /> */}
 
-        <Grid container spacing={2}>
+        <Grid container spacing={3}> {/* Increased spacing slightly */}
           <Grid item xs={12} md={request.imagePaths && request.imagePaths.length > 0 ? 7 : 12}>
-            <TableContainer component={Paper} elevation={2}>
+            <TableContainer component={Paper} elevation={2} sx={{p:1}}> {/* Added some padding */}
               <Table size="small">
                 <TableBody>
+                  {/* No specific title for table needed if main title is clear */}
                   {detailItem("Status", request.status)}
                   {detailItem("Requested By", request.requestedByUsername)}
                   {detailItem("Request Date", new Date(request.requestDate).toLocaleString())}
@@ -79,14 +85,17 @@ const RequestDetailsModal = ({ request, open, onClose }) => {
 
           {request.imagePaths && request.imagePaths.length > 0 && (
             <Grid item xs={12} md={5}>
-              <Typography variant="h6" gutterBottom>Images:</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <ImageIcon sx={{ mr: 1, color: 'secondary.main' }} />
+                <Typography variant="h6">Images</Typography>
+              </Box>
               <Paper elevation={2} sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: 400, overflowY: 'auto' }}>
                 {request.imagePaths.map((path, index) => (
-                  <Box key={index} sx={{ width: 'calc(50% - 5px)', mb: '10px' }}> {/* Two images per row */}
+                  <Box key={index} sx={{ width: 'calc(50% - 5px)', mb: '10px', '&:hover': { boxShadow: 3 } }}> {/* Added hover effect */}
                     <img
                       src={path.startsWith('http') ? path : `${process.env.REACT_APP_API_BASE_URL}/images/${path}`}
                       alt={`Request ${index + 1}`}
-                      style={{ width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '4px' }}
+                      style={{ width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '4px', display: 'block' }}
                     />
                   </Box>
                 ))}

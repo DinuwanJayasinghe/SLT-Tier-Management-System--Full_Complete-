@@ -8,9 +8,10 @@ import com.example.tirerequestsystem.repositories.TireRequestRepository;
 import com.example.tirerequestsystem.repositories.UserRepository;
 import com.example.tirerequestsystem.services.EmailService;
 import com.example.tirerequestsystem.services.FileStorageService;
-import com.example.tirerequestsystem.services.PdfGenerationService; // Added
+import com.example.tirerequestsystem.services.PdfGenerationService;
+import com.example.tirerequestsystem.services.WebSocketNotificationService; // Added
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders; // Added
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +35,8 @@ public class TireRequestController {
     @Autowired private UserRepository userRepository;
     @Autowired private FileStorageService fileStorageService;
     @Autowired private EmailService emailService;
-    @Autowired private PdfGenerationService pdfGenerationService; // Added
+    @Autowired private PdfGenerationService pdfGenerationService;
+    @Autowired private WebSocketNotificationService webSocketNotificationService; // Added
 
     private UserDetailsImpl getAuthenticatedUserDetails() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -77,6 +79,10 @@ public class TireRequestController {
         userRepository.findByRolesContaining("ROLE_MANAGER").stream()
            .filter(m -> m.getEmail() != null && !m.getEmail().isBlank())
            .forEach(m -> emailService.sendNewRequestEmailToManager(savedRequest, m.getEmail()));
+
+        // WebSocket notification for managers
+        webSocketNotificationService.notifyManagers("NEW_REQUEST_FOR_MANAGER", savedRequest);
+
         return new ResponseEntity<>(savedRequest, HttpStatus.CREATED);
     }
 
@@ -204,6 +210,13 @@ public class TireRequestController {
             userRepository.findByRolesContaining("ROLE_TRANSPORT_OFFICER").stream()
                 .filter(to -> to.getEmail() != null && !to.getEmail().isBlank())
                 .forEach(to -> emailService.sendManagerApprovalEmailToTransportOfficer(saved, to.getEmail()));
+
+            // WebSocket notifications
+            webSocketNotificationService.notifyTransportOfficers("MANAGER_APPROVAL_FOR_TO", saved);
+            if (saved.getRequestedByUserId() != null) {
+                webSocketNotificationService.notifyUserAboutStatusUpdate(saved.getRequestedByUserId(), saved);
+            }
+
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -220,6 +233,12 @@ public class TireRequestController {
             if (saved.getRequestedByUserId() != null) userRepository.findById(saved.getRequestedByUserId())
                 .filter(u -> u.getEmail() != null && !u.getEmail().isBlank())
                 .ifPresent(u -> emailService.sendRejectionEmail(saved, u.getEmail(), "Manager", saved.getManagerRemarks()));
+
+            // WebSocket notification for user
+            if (saved.getRequestedByUserId() != null) {
+                webSocketNotificationService.notifyUserAboutStatusUpdate(saved.getRequestedByUserId(), saved);
+            }
+
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -237,6 +256,14 @@ public class TireRequestController {
             if (saved.getRequestedByUserId()!=null) rEmail = userRepository.findById(saved.getRequestedByUserId()).filter(u->u.getEmail()!=null && !u.getEmail().isBlank()).map(User::getEmail).orElse(null);
             mEmail = userRepository.findByRolesContaining("ROLE_MANAGER").stream().filter(m->m.getEmail()!=null && !m.getEmail().isBlank()).map(User::getEmail).findFirst().orElse(null);
             emailService.sendFinalApprovalEmail(saved, rEmail, mEmail);
+
+            // WebSocket notification for user
+            if (saved.getRequestedByUserId() != null) {
+                webSocketNotificationService.notifyUserAboutStatusUpdate(saved.getRequestedByUserId(), saved);
+            }
+            // Optionally, notify manager as well if that's a requirement
+            // webSocketNotificationService.notifyManagers("REQUEST_FINAL_APPROVED", savedRequest);
+
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -253,6 +280,14 @@ public class TireRequestController {
             if (saved.getRequestedByUserId() != null) userRepository.findById(saved.getRequestedByUserId())
                 .filter(u -> u.getEmail() != null && !u.getEmail().isBlank())
                 .ifPresent(u -> emailService.sendRejectionEmail(saved, u.getEmail(), "Transport Officer", saved.getTransportOfficerRemarks()));
+
+            // WebSocket notification for user
+            if (saved.getRequestedByUserId() != null) {
+                webSocketNotificationService.notifyUserAboutStatusUpdate(saved.getRequestedByUserId(), saved);
+            }
+            // Optionally, notify manager if that's a requirement
+            // webSocketNotificationService.notifyManagers("REQUEST_REJECTED_BY_TO", savedRequest);
+
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }

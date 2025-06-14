@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Container, Box, Paper, CircularProgress, Alert, Tabs, Tab, Link } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay'; // Icon for Pending Final Approval
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck'; // Icon for All Processed / Relevant
 import TransportOfficerRequestsTable from '../components/TransportOfficerRequestsTable'; // Import the new table component
 import TireRequestService from '../services/TireRequestService';
 import { useNotifications } from '../context/NotificationsContext'; // Import useNotifications
@@ -70,14 +72,21 @@ const TransportOfficerDashboard = () => {
         )}
 
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={handleTabChange} aria-label="request status tabs for TO">
-                <Tab label={`Pending Final Approval (${pendingFinalApprovalRequests.length})`} />
-                {/* Displaying count from allRequests filtered, or could use pendingTONotifications if logic aligns perfectly */}
-                <Tab label={`All Processed / Relevant (${allRequests.length})`} />
+            <Tabs value={currentTab} onChange={handleTabChange} aria-label="request status tabs for TO" centered>
+                <Tab
+                    icon={<PlaylistPlayIcon />}
+                    iconPosition="start"
+                    label={`Pending Final Approval (${pendingFinalApprovalRequests.length})`}
+                />
+                <Tab
+                    icon={<PlaylistAddCheckIcon />}
+                    iconPosition="start"
+                    label={`All Processed / Relevant (${allRequests.length})`}
+                />
             </Tabs>
         </Box>
 
-        {isLoading && <CircularProgress />}
+        {isLoading && <CircularProgress sx={{ display: 'block', margin: 'auto', my: 2 }} />}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {!isLoading && !error && (

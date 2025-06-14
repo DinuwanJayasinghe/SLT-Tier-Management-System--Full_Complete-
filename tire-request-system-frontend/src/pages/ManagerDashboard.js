@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Container, Box, Paper, CircularProgress, Alert, Tabs, Tab, Link } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import PendingActionsIcon from '@mui/icons-material/PendingActions'; // Icon for Pending
+import ListAltIcon from '@mui/icons-material/ListAlt'; // Icon for All Requests
 import ManagerRequestsTable from '../components/ManagerRequestsTable'; // Import the table component
 import TireRequestService from '../services/TireRequestService';
 import { useNotifications } from '../context/NotificationsContext'; // Import useNotifications
@@ -69,14 +71,21 @@ const ManagerDashboard = () => {
         )}
 
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={handleTabChange} aria-label="request status tabs">
-                <Tab label={`Pending Your Approval (${pendingRequests.length})`} />
-                {/* Displaying count from allRequests filtered, or could use pendingManagerNotifications if logic aligns perfectly */}
-                <Tab label={`All Requests (${allRequests.length})`} />
+            <Tabs value={currentTab} onChange={handleTabChange} aria-label="request status tabs" centered>
+                <Tab
+                    icon={<PendingActionsIcon />}
+                    iconPosition="start"
+                    label={`Pending Your Approval (${pendingRequests.length})`}
+                />
+                <Tab
+                    icon={<ListAltIcon />}
+                    iconPosition="start"
+                    label={`All Requests (${allRequests.length})`}
+                />
             </Tabs>
         </Box>
 
-        {isLoading && <CircularProgress />}
+        {isLoading && <CircularProgress sx={{ display: 'block', margin: 'auto', my: 2 }} />}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {!isLoading && !error && (

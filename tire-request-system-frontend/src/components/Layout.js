@@ -4,11 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, Avatar } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'; // For New Request
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
-// import AccountCircle from '@mui/icons-material/AccountCircle'; // Replaced by Avatar
-import NotificationBell from './NotificationBell'; // Import NotificationBell
+import NotificationBell from './NotificationBell';
 import { ToastContainer } from 'react-toastify';
 
 const Layout = () => {
@@ -32,13 +32,20 @@ const Layout = () => {
 
   const userRoles = currentUser?.roles || [];
 
-  const getDashboardPath = () => {
+  // Centralized logic for determining the primary dashboard path
+  const getPrimaryDashboardPath = () => {
     if (userRoles.includes('ROLE_ADMIN')) return '/admin/dashboard';
     if (userRoles.includes('ROLE_MANAGER')) return '/manager/dashboard';
     if (userRoles.includes('ROLE_TRANSPORT_OFFICER')) return '/to/dashboard';
     if (userRoles.includes('ROLE_USER')) return '/user/dashboard';
-    return '/dashboard'; // Fallback, though ProtectedRoute should handle specific dashboard access
+    return '/dashboard'; // Generic fallback
   };
+
+  // Determine if user can create requests (adjust roles as needed)
+  const canCreateRequests = isAuthenticated() && userRoles.some(role =>
+    ['ROLE_USER', 'ROLE_MANAGER', 'ROLE_ADMIN'].includes(role) // Example: Admins/Managers can also create
+  );
+
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -49,7 +56,12 @@ const Layout = () => {
           </Typography>
           <Button color="inherit" component={RouterLink} to="/" startIcon={<HomeIcon />}>Home</Button>
           {isAuthenticated() && (
-            <Button color="inherit" component={RouterLink} to={getDashboardPath()} startIcon={<DashboardIcon />}>Dashboard</Button>
+            <Button color="inherit" component={RouterLink} to={getPrimaryDashboardPath()} startIcon={<DashboardIcon />}>Dashboard</Button>
+          )}
+          {canCreateRequests && (
+             <Button color="inherit" component={RouterLink} to="/requests/new" startIcon={<AddCircleOutlineIcon />}>
+               New Request
+             </Button>
           )}
           {!isAuthenticated() && (
             <>

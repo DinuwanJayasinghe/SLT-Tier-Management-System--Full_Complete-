@@ -12,6 +12,7 @@ import UserDashboard from './pages/UserDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import TransportOfficerDashboard from './pages/TransportOfficerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import NewTireRequestPage from './pages/NewTireRequestPage'; // Import NewTireRequestPage
 
 import { Typography, Container, Box } from '@mui/material';
 import 'react-toastify/dist/ReactToastify.css';
@@ -53,17 +54,21 @@ const HomePage = () => (
 function AppRoutes() {
   const { isAuthenticated, currentUser } = useAuth();
 
+  // Helper to determine the primary dashboard path for redirection
+  const getPrimaryDashboardPathForRedirect = () => {
+    const userRoles = currentUser?.roles || [];
+    if (userRoles.includes('ROLE_ADMIN')) return '/admin/dashboard';
+    if (userRoles.includes('ROLE_MANAGER')) return '/manager/dashboard';
+    if (userRoles.includes('ROLE_TRANSPORT_OFFICER')) return '/to/dashboard';
+    if (userRoles.includes('ROLE_USER')) return '/user/dashboard';
+    return '/dashboard'; // Fallback to generic dashboard (which itself might be a landing/info page)
+  };
+
   const getHomeElement = () => {
     if (!isAuthenticated()) {
       return <HomePage />;
     }
-    // Redirect authenticated users from root to their specific dashboard
-    const userRoles = currentUser?.roles || [];
-    if (userRoles.includes('ROLE_ADMIN')) return <Navigate to="/admin/dashboard" replace />;
-    if (userRoles.includes('ROLE_MANAGER')) return <Navigate to="/manager/dashboard" replace />;
-    if (userRoles.includes('ROLE_TRANSPORT_OFFICER')) return <Navigate to="/to/dashboard" replace />;
-    if (userRoles.includes('ROLE_USER')) return <Navigate to="/user/dashboard" replace />;
-    return <Navigate to="/dashboard" replace />; // Fallback generic dashboard
+    return <Navigate to={getPrimaryDashboardPathForRedirect()} replace />;
   };
 
   return (
@@ -75,8 +80,25 @@ function AppRoutes() {
         {/* Root path handling */}
         <Route path="/" element={getHomeElement()} />
 
-        {/* Generic dashboard as a fallback or for users with no specific role pages yet */}
-        <Route path="/dashboard" element={<ProtectedRoute><GenericDashboard /></ProtectedRoute>} />
+        {/* Generic dashboard path - redirects to role-specific if possible, otherwise shows GenericDashboard */}
+        <Route
+            path="/dashboard"
+            element={
+                <ProtectedRoute>
+                    {currentUser?.roles?.length > 0 ? <Navigate to={getPrimaryDashboardPathForRedirect()} replace /> : <GenericDashboard />}
+                </ProtectedRoute>
+            }
+        />
+
+        {/* New Tire Request Page */}
+        <Route
+            path="/requests/new"
+            element={
+                <ProtectedRoute allowedRoles={['ROLE_USER', 'ROLE_MANAGER', 'ROLE_ADMIN']}> {/* Adjust roles as needed */}
+                    <NewTireRequestPage />
+                </ProtectedRoute>
+            }
+        />
 
         {/* Role-specific dashboards */}
         <Route
@@ -96,7 +118,7 @@ function AppRoutes() {
           element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']}><AdminDashboard /></ProtectedRoute>}
         />
 
-        {/* Add other application routes here, e.g., /requests/new, /requests/:id */}
+        {/* Add other application routes here, e.g., /requests/:id (view specific request) */}
 
         <Route path="*" element={
           <Container><Box sx={{my:4}}><Typography variant="h4">404 Not Found</Typography></Box></Container>
